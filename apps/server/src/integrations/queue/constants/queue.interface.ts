@@ -72,7 +72,7 @@ export interface IOutgoingWebhookJob {
   deliveryId: string;
   event: string;
   occurredAt: string;
-  workspaceId?: string;
+  workspaceId: string;
   pageId: string;
 }
 

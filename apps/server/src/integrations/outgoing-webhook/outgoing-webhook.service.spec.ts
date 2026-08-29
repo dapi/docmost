@@ -63,6 +63,7 @@ describe('OutgoingWebhookService', () => {
       deliveryId: 'delivery-1',
       event: 'page.created',
       occurredAt: '2026-08-29T12:00:00.000Z',
+      workspaceId: 'workspace-1',
       pageId: 'page-1',
     });
 
@@ -84,6 +85,7 @@ describe('OutgoingWebhookService', () => {
         deliveryId: 'delivery-1',
         event: 'page.created',
         occurredAt: '2026-08-29T12:00:00.000Z',
+        workspaceId: 'workspace-1',
         pageId: 'page-1',
       }),
     ).rejects.toThrow('HTTP 503');
@@ -101,6 +103,7 @@ describe('OutgoingWebhookService', () => {
         deliveryId: 'delivery-1',
         event: 'page.created',
         occurredAt: '2026-08-29T12:00:00.000Z',
+        workspaceId: 'workspace-1',
         pageId: 'page-1',
       }),
     ).rejects.toThrow('delivery is not configured');

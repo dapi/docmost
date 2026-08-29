@@ -69,6 +69,13 @@ export class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  @Matches(
+    /^(?:\s*page\.(?:created|updated|moved|deleted|restored)\s*(?:,\s*page\.(?:created|updated|moved|deleted|restored)\s*)*)?$/,
+    {
+      message:
+        'OUTGOING_WEBHOOK_EVENTS must be a comma-separated list of supported page events',
+    },
+  )
   OUTGOING_WEBHOOK_EVENTS: string;
 
   @IsOptional()

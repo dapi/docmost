@@ -13,7 +13,7 @@ export interface OutgoingWebhookPayload {
   id: string;
   event: OutgoingWebhookEvent;
   occurredAt: string;
-  workspaceId?: string;
+  workspaceId: string;
   data: {
     pageId: string;
   };

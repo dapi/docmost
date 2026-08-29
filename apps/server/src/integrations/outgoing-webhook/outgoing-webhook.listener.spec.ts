@@ -48,7 +48,10 @@ describe('OutgoingWebhookListener', () => {
     } as EnvironmentService;
     const listener = new OutgoingWebhookListener(env, queue as never);
 
-    await listener.handleUpdated({ pageIds: ['page-1'] });
+    await listener.handleUpdated({
+      pageIds: ['page-1'],
+      workspaceId: 'workspace-1',
+    });
 
     expect(queue.addBulk).not.toHaveBeenCalled();
   });
@@ -62,7 +65,10 @@ describe('OutgoingWebhookListener', () => {
     const listener = new OutgoingWebhookListener(env, queue as never);
 
     await expect(
-      listener.handleCreated({ pageIds: ['page-1'] }),
+      listener.handleCreated({
+        pageIds: ['page-1'],
+        workspaceId: 'workspace-1',
+      }),
     ).rejects.toThrow('Redis unavailable');
   });
 
@@ -74,7 +80,10 @@ describe('OutgoingWebhookListener', () => {
     const listener = new OutgoingWebhookListener(env, queue as never);
     const pageIds = Array.from({ length: 201 }, (_, index) => `page-${index}`);
 
-    await listener.handleCreated({ pageIds });
+    await listener.handleCreated({
+      pageIds,
+      workspaceId: 'workspace-1',
+    });
 
     expect(queue.addBulk).toHaveBeenCalledTimes(3);
     expect(queue.addBulk.mock.calls.map(([jobs]) => jobs.length)).toEqual([
@@ -82,5 +91,21 @@ describe('OutgoingWebhookListener', () => {
     ]);
     const jobs = queue.addBulk.mock.calls.flatMap(([batch]) => batch);
     expect(new Set(jobs.map((job) => job.data.occurredAt)).size).toBe(1);
+  });
+
+  it('rejects page events without workspace metadata', async () => {
+    const env = {
+      getOutgoingWebhookUrl: () => 'https://example.com/events',
+      getOutgoingWebhookEvents: () => ['page.created'],
+    } as EnvironmentService;
+    const listener = new OutgoingWebhookListener(env, queue as never);
+
+    await expect(
+      listener.handleCreated({
+        pageIds: ['page-1'],
+        workspaceId: undefined,
+      } as never),
+    ).rejects.toThrow('page.created is missing workspaceId');
+    expect(queue.addBulk).not.toHaveBeenCalled();
   });
 });

@@ -11,7 +11,7 @@ import { OutgoingWebhookEvent } from './outgoing-webhook.types';
 
 interface PageEvent {
   pageIds: string[];
-  workspaceId?: string;
+  workspaceId: string;
 }
 
 // Database events are best-effort until their BullMQ insertion completes.
@@ -67,6 +67,9 @@ export class OutgoingWebhookListener {
       !this.environmentService.getOutgoingWebhookEvents().includes(eventName)
     ) {
       return;
+    }
+    if (!event.workspaceId) {
+      throw new Error(`${eventName} is missing workspaceId`);
     }
 
     const occurredAt = new Date().toISOString();

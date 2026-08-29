@@ -22,10 +22,10 @@ export class OutgoingWebhookProcessor
   }
 
   @OnWorkerEvent('failed')
-  onFailed(job: Job) {
-    this.logger.warn(
-      `Outgoing webhook ${job.data.deliveryId} failed: ${job.failedReason}`,
-    );
+  onFailed(job: Job<IOutgoingWebhookJob> | undefined, error: Error) {
+    const deliveryId = job?.data?.deliveryId ?? job?.id ?? 'unknown';
+    const reason = job?.failedReason ?? error.message;
+    this.logger.warn(`Outgoing webhook ${deliveryId} failed: ${reason}`);
   }
 
   async onModuleDestroy(): Promise<void> {
