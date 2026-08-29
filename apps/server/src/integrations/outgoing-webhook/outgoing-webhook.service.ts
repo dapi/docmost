@@ -42,8 +42,13 @@ export class OutgoingWebhookService {
         'x-docmost-signature-256': signOutgoingWebhook(secret, body),
       },
       body,
+      redirect: 'error',
       signal: AbortSignal.timeout(10_000),
     });
+
+    // Webhook response bodies are intentionally ignored. Cancel the stream so
+    // a receiver cannot retain an idle connection by sending an unbounded body.
+    await response.body?.cancel();
 
     if (!response.ok) {
       throw new Error(`Outgoing webhook returned HTTP ${response.status}`);

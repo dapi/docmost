@@ -80,5 +80,7 @@ describe('OutgoingWebhookListener', () => {
     expect(queue.addBulk.mock.calls.map(([jobs]) => jobs.length)).toEqual([
       100, 100, 1,
     ]);
+    const jobs = queue.addBulk.mock.calls.flatMap(([batch]) => batch);
+    expect(new Set(jobs.map((job) => job.data.occurredAt)).size).toBe(1);
   });
 });

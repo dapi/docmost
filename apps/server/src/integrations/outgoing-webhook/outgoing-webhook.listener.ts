@@ -69,36 +69,42 @@ export class OutgoingWebhookListener {
       return;
     }
 
-    const jobs = event.pageIds.map((pageId) => {
-      const data: IOutgoingWebhookJob = {
-        deliveryId: randomUUID(),
-        event: eventName,
-        occurredAt: new Date().toISOString(),
-        workspaceId: event.workspaceId,
-        pageId,
-      };
+    const occurredAt = new Date().toISOString();
 
-      return {
-        name: QueueJob.DELIVER_OUTGOING_WEBHOOK,
-        data,
-        opts:
-          delay > 0
-            ? {
-                delay,
-                deduplication: {
-                  id: `${eventName}-${pageId}`,
-                  replace: true,
-                  keepLastIfActive: true,
-                },
-              }
-            : undefined,
-      };
-    });
+    for (
+      let offset = 0;
+      offset < event.pageIds.length;
+      offset += enqueueBatchSize
+    ) {
+      const jobs = event.pageIds
+        .slice(offset, offset + enqueueBatchSize)
+        .map((pageId) => {
+          const data: IOutgoingWebhookJob = {
+            deliveryId: randomUUID(),
+            event: eventName,
+            occurredAt,
+            workspaceId: event.workspaceId,
+            pageId,
+          };
 
-    for (let offset = 0; offset < jobs.length; offset += enqueueBatchSize) {
-      await this.webhookQueue.addBulk(
-        jobs.slice(offset, offset + enqueueBatchSize),
-      );
+          return {
+            name: QueueJob.DELIVER_OUTGOING_WEBHOOK,
+            data,
+            opts:
+              delay > 0
+                ? {
+                    delay,
+                    deduplication: {
+                      id: `${eventName}-${pageId}`,
+                      replace: true,
+                      keepLastIfActive: true,
+                    },
+                  }
+                : undefined,
+          };
+        });
+
+      await this.webhookQueue.addBulk(jobs);
     }
   }
 }

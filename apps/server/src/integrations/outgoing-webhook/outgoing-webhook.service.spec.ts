@@ -43,6 +43,30 @@ describe('OutgoingWebhookService', () => {
     expect(request.headers['x-docmost-signature-256']).toBe(
       signOutgoingWebhook(secret, request.body as string),
     );
+    expect(request.redirect).toBe('error');
+  });
+
+  it('releases webhook response bodies without reading them', async () => {
+    const cancel = jest.fn().mockResolvedValue(undefined);
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: { cancel },
+    } as never);
+    const env = {
+      getOutgoingWebhookUrl: () => 'https://example.com/events',
+      getOutgoingWebhookSecret: () => secret,
+    } as EnvironmentService;
+    const service = new OutgoingWebhookService(env);
+
+    await service.deliver({
+      deliveryId: 'delivery-1',
+      event: 'page.created',
+      occurredAt: '2026-08-29T12:00:00.000Z',
+      pageId: 'page-1',
+    });
+
+    expect(cancel).toHaveBeenCalledTimes(1);
   });
 
   it('throws on non-success responses so BullMQ retries delivery', async () => {
