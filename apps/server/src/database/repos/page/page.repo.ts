@@ -10,7 +10,7 @@ import {
 import { PaginationOptions } from '@docmost/db/pagination/pagination-options';
 import { executeWithCursorPagination } from '@docmost/db/pagination/cursor-pagination';
 import { validate as isValidUUID } from 'uuid';
-import { ExpressionBuilder, sql } from 'kysely';
+import { ExpressionBuilder, sql, UpdateResult } from 'kysely';
 import { DB } from '@docmost/db/types/db';
 import { jsonArrayFrom, jsonObjectFrom } from 'kysely/helpers/postgres';
 import { SpaceMemberRepo } from '@docmost/db/repos/space/space-member.repo';
@@ -142,8 +142,8 @@ export class PageRepo {
     updatePageData: UpdatablePage,
     pageIds: string[],
     trx?: KyselyTransaction,
-  ) {
-    const result = await dbOrTx(this.db, trx)
+  ): Promise<UpdateResult> {
+    const updatedPages = await dbOrTx(this.db, trx)
       .updateTable('pages')
       .set({ ...updatePageData, updatedAt: new Date() })
       .where(
@@ -151,14 +151,24 @@ export class PageRepo {
         'in',
         pageIds,
       )
-      .executeTakeFirst();
+      .returning(['id', 'workspaceId'])
+      .execute();
 
-    this.eventEmitter.emit(EventName.PAGE_UPDATED, {
-      pageIds: pageIds,
-      workspaceId: updatePageData.workspaceId,
-    });
+    const pageIdsByWorkspace = new Map<string, string[]>();
+    for (const page of updatedPages) {
+      const workspacePageIds = pageIdsByWorkspace.get(page.workspaceId) ?? [];
+      workspacePageIds.push(page.id);
+      pageIdsByWorkspace.set(page.workspaceId, workspacePageIds);
+    }
 
-    return result;
+    for (const [workspaceId, updatedPageIds] of pageIdsByWorkspace) {
+      this.eventEmitter.emit(EventName.PAGE_UPDATED, {
+        pageIds: updatedPageIds,
+        workspaceId,
+      });
+    }
+
+    return new UpdateResult(BigInt(updatedPages.length), undefined);
   }
 
   async insertPage(

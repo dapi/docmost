@@ -574,19 +574,17 @@ export class FileImportTaskService {
           }
         }
 
-        if (validPageIds.size > 0) {
-          this.eventEmitter.emit(EventName.PAGE_CREATED, {
-            pageIds: Array.from(validPageIds),
-            workspaceId: fileTask.workspaceId,
-          });
-        }
-
         this.logger.log(
           `Successfully imported ${totalPagesProcessed} pages with ${filteredBacklinks.length} backlinks`,
         );
       });
 
       if (validPageIds.size > 0) {
+        this.eventEmitter.emit(EventName.PAGE_CREATED, {
+          pageIds: Array.from(validPageIds),
+          workspaceId: fileTask.workspaceId,
+        });
+
         const auditPayloads = Array.from(validPageIds).map((pageId) => ({
           event: AuditEvent.PAGE_CREATED,
           resourceType: AuditResource.PAGE,
