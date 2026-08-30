@@ -12,6 +12,7 @@ import {
 } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { IsISO6391 } from '../../common/validators/is-iso6391';
+import { outgoingWebhookEventsPattern } from '../outgoing-webhook/outgoing-webhook.types';
 
 export class EnvironmentVariables {
   @IsNotEmpty()
@@ -52,6 +53,34 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsIn(['local', 's3', 'azure'])
   STORAGE_DRIVER: string;
+
+  @IsOptional()
+  @ValidateIf(
+    (obj) => obj.OUTGOING_WEBHOOK_URL != '' && obj.OUTGOING_WEBHOOK_URL != null,
+  )
+  @IsUrl({
+    protocols: ['http', 'https'],
+    require_protocol: true,
+    require_tld: false,
+    disallow_auth: true,
+  })
+  OUTGOING_WEBHOOK_URL: string;
+
+  @ValidateIf(
+    (obj) => obj.OUTGOING_WEBHOOK_URL != '' && obj.OUTGOING_WEBHOOK_URL != null,
+  )
+  @IsString()
+  @MinLength(32)
+  @IsNotIn(['replace-with-at-least-32-random-characters'])
+  OUTGOING_WEBHOOK_SECRET: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(outgoingWebhookEventsPattern, {
+    message:
+      'OUTGOING_WEBHOOK_EVENTS must be a comma-separated list of supported page events',
+  })
+  OUTGOING_WEBHOOK_EVENTS: string;
 
   @IsOptional()
   @ValidateIf((obj) => obj.COLLAB_URL != '' && obj.COLLAB_URL != null)

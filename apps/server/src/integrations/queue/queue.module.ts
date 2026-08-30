@@ -102,6 +102,17 @@ import { GeneralQueueProcessor } from './processors/general-queue.processor';
         removeOnFail: { count: 100 },
       },
     }),
+    BullModule.registerQueue({
+      name: QueueName.WEBHOOK_QUEUE,
+      defaultJobOptions: {
+        // Retry immediate failures for several hours instead of exhausting
+        // every attempt during a short receiver restart.
+        attempts: 12,
+        backoff: { type: 'exponential', delay: 10_000, jitter: 0.5 },
+        removeOnComplete: { count: 200 },
+        removeOnFail: { count: 500 },
+      },
+    }),
   ],
   exports: [BullModule],
   providers: [GeneralQueueProcessor],

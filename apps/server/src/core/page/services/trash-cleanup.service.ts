@@ -5,6 +5,8 @@ import { KyselyDB } from '@docmost/db/types/kysely.types';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { QueueJob, QueueName } from '../../../integrations/queue/constants';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventName } from '../../../common/events/event.contants';
 
 const DEFAULT_RETENTION_DAYS = 30;
 
@@ -15,6 +17,7 @@ export class TrashCleanupService {
   constructor(
     @InjectKysely() private readonly db: KyselyDB,
     @InjectQueue(QueueName.ATTACHMENT_QUEUE) private attachmentQueue: Queue,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @Interval('trash-cleanup', 24 * 60 * 60 * 1000) // every 24 hours
@@ -46,7 +49,7 @@ export class TrashCleanupService {
 
         for (const page of oldDeletedPages) {
           try {
-            await this.cleanupPage(page.id);
+            await this.cleanupPage(page.id, workspace.id);
             totalCleaned++;
           } catch (error) {
             this.logger.error(
@@ -70,7 +73,7 @@ export class TrashCleanupService {
     }
   }
 
-  private async cleanupPage(pageId: string) {
+  private async cleanupPage(pageId: string, workspaceId: string) {
     // Get all descendants using recursive CTE (including the page itself)
     const descendants = await this.db
       .withRecursive('page_descendants', (db) =>
@@ -115,7 +118,17 @@ export class TrashCleanupService {
 
     try {
       if (pageIds.length > 0) {
-        await this.db.deleteFrom('pages').where('id', 'in', pageIds).execute();
+        const result = await this.db
+          .deleteFrom('pages')
+          .where('id', 'in', pageIds)
+          .executeTakeFirst();
+
+        if (result.numDeletedRows > 0n) {
+          this.eventEmitter.emit(EventName.PAGE_DELETED, {
+            pageIds,
+            workspaceId,
+          });
+        }
       }
     } catch (error) {
       // Log but don't throw - pages might have been deleted by another node
