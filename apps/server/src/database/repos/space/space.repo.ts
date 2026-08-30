@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectKysely } from 'nestjs-kysely';
 import { KyselyDB, KyselyTransaction } from '@docmost/db/types/kysely.types';
-import { dbOrTx } from '@docmost/db/utils';
+import { dbOrTx, executeTx } from '@docmost/db/utils';
 import {
   InsertableSpace,
   Space,
@@ -222,15 +222,39 @@ export class SpaceRepo {
   }
 
   async deleteSpace(spaceId: string, workspaceId: string): Promise<void> {
-    await this.db
-      .deleteFrom('spaces')
-      .where('id', '=', spaceId)
-      .where('workspaceId', '=', workspaceId)
-      .execute();
+    const deletedPageIds = await executeTx(this.db, async (trx) => {
+      const space = await trx
+        .selectFrom('spaces')
+        .select('id')
+        .where('id', '=', spaceId)
+        .where('workspaceId', '=', workspaceId)
+        .forUpdate()
+        .executeTakeFirst();
+
+      if (!space) return null;
+
+      const pages = await trx
+        .selectFrom('pages')
+        .select('id')
+        .where('spaceId', '=', spaceId)
+        .where('workspaceId', '=', workspaceId)
+        .execute();
+
+      const result = await trx
+        .deleteFrom('spaces')
+        .where('id', '=', spaceId)
+        .where('workspaceId', '=', workspaceId)
+        .executeTakeFirst();
+
+      return result.numDeletedRows > 0n ? pages.map((page) => page.id) : null;
+    });
+
+    if (!deletedPageIds) return;
 
     this.eventEmitter.emit(EventName.SPACE_DELETED, {
       spaceId,
       workspaceId,
+      pageIds: deletedPageIds,
     });
   }
 }

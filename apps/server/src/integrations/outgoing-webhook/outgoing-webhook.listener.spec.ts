@@ -108,4 +108,35 @@ describe('OutgoingWebhookListener', () => {
     ).rejects.toThrow('page.created is missing workspaceId');
     expect(queue.addBulk).not.toHaveBeenCalled();
   });
+
+  it('publishes deleted pages from a deleted space', async () => {
+    const env = {
+      getOutgoingWebhookUrl: () => 'https://example.com/events',
+      getOutgoingWebhookEvents: () => ['page.deleted'],
+    } as EnvironmentService;
+    const listener = new OutgoingWebhookListener(env, queue as never);
+
+    await listener.handleDeletedSpacePages({
+      pageIds: ['page-1', 'page-2'],
+      workspaceId: 'workspace-1',
+    });
+
+    expect(queue.addBulk).toHaveBeenCalledTimes(1);
+    expect(queue.addBulk.mock.calls[0][0]).toEqual([
+      expect.objectContaining({
+        data: expect.objectContaining({
+          event: 'page.deleted',
+          pageId: 'page-1',
+          workspaceId: 'workspace-1',
+        }),
+      }),
+      expect.objectContaining({
+        data: expect.objectContaining({
+          event: 'page.deleted',
+          pageId: 'page-2',
+          workspaceId: 'workspace-1',
+        }),
+      }),
+    ]);
+  });
 });

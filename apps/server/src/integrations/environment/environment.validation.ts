@@ -12,6 +12,7 @@ import {
 } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { IsISO6391 } from '../../common/validators/is-iso6391';
+import { outgoingWebhookEventsPattern } from '../outgoing-webhook/outgoing-webhook.types';
 
 export class EnvironmentVariables {
   @IsNotEmpty()
@@ -57,7 +58,12 @@ export class EnvironmentVariables {
   @ValidateIf(
     (obj) => obj.OUTGOING_WEBHOOK_URL != '' && obj.OUTGOING_WEBHOOK_URL != null,
   )
-  @IsUrl({ protocols: ['http', 'https'], require_tld: false })
+  @IsUrl({
+    protocols: ['http', 'https'],
+    require_protocol: true,
+    require_tld: false,
+    disallow_auth: true,
+  })
   OUTGOING_WEBHOOK_URL: string;
 
   @ValidateIf(
@@ -65,17 +71,15 @@ export class EnvironmentVariables {
   )
   @IsString()
   @MinLength(32)
+  @IsNotIn(['replace-with-at-least-32-random-characters'])
   OUTGOING_WEBHOOK_SECRET: string;
 
   @IsOptional()
   @IsString()
-  @Matches(
-    /^(?:\s*page\.(?:created|updated|moved|deleted|restored)\s*(?:,\s*page\.(?:created|updated|moved|deleted|restored)\s*)*)?$/,
-    {
-      message:
-        'OUTGOING_WEBHOOK_EVENTS must be a comma-separated list of supported page events',
-    },
-  )
+  @Matches(outgoingWebhookEventsPattern, {
+    message:
+      'OUTGOING_WEBHOOK_EVENTS must be a comma-separated list of supported page events',
+  })
   OUTGOING_WEBHOOK_EVENTS: string;
 
   @IsOptional()

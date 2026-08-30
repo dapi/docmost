@@ -68,14 +68,6 @@ export interface IPageUpdateNotificationJob {
   actorIds: string[];
 }
 
-export interface IOutgoingWebhookJob {
-  deliveryId: string;
-  event: string;
-  occurredAt: string;
-  workspaceId: string;
-  pageId: string;
-}
-
 export interface IPermissionGrantedNotificationJob {
   userIds: string[];
   pageId: string;

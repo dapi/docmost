@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import ms, { StringValue } from 'ms';
+import {
+  defaultOutgoingWebhookEvents,
+  isOutgoingWebhookEvent,
+  OutgoingWebhookEvent,
+} from '../outgoing-webhook/outgoing-webhook.types';
 
 @Injectable()
 export class EnvironmentService {
@@ -234,16 +239,16 @@ export class EnvironmentService {
     return this.configService.get<string>('OUTGOING_WEBHOOK_SECRET');
   }
 
-  getOutgoingWebhookEvents(): string[] {
+  getOutgoingWebhookEvents(): OutgoingWebhookEvent[] {
     const raw = this.configService.get<string>(
       'OUTGOING_WEBHOOK_EVENTS',
-      'page.created,page.updated,page.moved,page.deleted,page.restored',
+      defaultOutgoingWebhookEvents,
     );
 
     return raw
       .split(',')
       .map((event) => event.trim())
-      .filter(Boolean);
+      .filter(isOutgoingWebhookEvent);
   }
 
   getBillingTrialDays(): number {

@@ -6,8 +6,10 @@ import { randomUUID } from 'node:crypto';
 import { EventName } from '../../common/events/event.contants';
 import { EnvironmentService } from '../environment/environment.service';
 import { QueueJob, QueueName } from '../queue/constants';
-import { IOutgoingWebhookJob } from '../queue/constants/queue.interface';
-import { OutgoingWebhookEvent } from './outgoing-webhook.types';
+import {
+  OutgoingWebhookEvent,
+  OutgoingWebhookJob,
+} from './outgoing-webhook.types';
 
 interface PageEvent {
   pageIds: string[];
@@ -52,6 +54,11 @@ export class OutgoingWebhookListener {
     return this.enqueue('page.deleted', event);
   }
 
+  @OnEvent(EventName.SPACE_DELETED, pageEventOptions)
+  handleDeletedSpacePages(event: PageEvent) {
+    return this.enqueue('page.deleted', event);
+  }
+
   @OnEvent(EventName.PAGE_RESTORED, pageEventOptions)
   handleRestored(event: PageEvent) {
     return this.enqueue('page.restored', event);
@@ -82,7 +89,7 @@ export class OutgoingWebhookListener {
       const jobs = event.pageIds
         .slice(offset, offset + enqueueBatchSize)
         .map((pageId) => {
-          const data: IOutgoingWebhookJob = {
+          const data: OutgoingWebhookJob = {
             deliveryId: randomUUID(),
             event: eventName,
             occurredAt,
